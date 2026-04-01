@@ -125,7 +125,7 @@ void start_server() {
   //URI handlers
   httpd_uri_t root_uri = {
     .uri = "/",
-    .method = HTTP_GET,
+    .method = HTTP_GET, //Root's method always must be GET
     .handler = handle_root,
     .user_ctx = NULL
   };
