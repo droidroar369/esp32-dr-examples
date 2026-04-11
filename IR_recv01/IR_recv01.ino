@@ -25,24 +25,62 @@
 #define LED 8 //Led for testing
 #define LED_INVERTED //If defined, led uses inverted logic. Disable if led is not inverted
 
+#define SDA_OLED 5
+#define SCL_OLED 6
+
 #define TRIGGER_CMD 0x40 //I used the command 0x40 because this is the on-off button of muy control
 
 bool led_on = false;
 
+#if defined(SDA_OLED) && defined(SCL_OLED)
+#include <U8g2lib.h>
+
+//OLed object, there is no 72x40 constructor in u8g2 hence the 72x40 screen is
+// mapped in the middle of the 132x64 pixel buffer of the SSD1306 controller
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, SCL_OLED, SDA_OLED);
+
+const int width = 70;
+const int height = 40;
+const int xOffset = 30; // = (132-w)/2
+const int yOffset = 24; // = (64-h)/2
+#endif
+
+
 void receive_ir_data() {
     if (IrReceiver.decode()) {
+        //Print protocol in Serial
         Serial.print("Decoded protocol: ");
-        Serial.print(getProtocolString(IrReceiver.decodedIRData.protocol));
-        Serial.print(", decoded raw data: ");
+        Serial.println(getProtocolString(IrReceiver.decodedIRData.protocol));
+
+        //Print raw data in Serial
+        Serial.print("Decoded raw data: ");
 #if (__INT_WIDTH__ < 32)
-        Serial.print(IrReceiver.decodedIRData.decodedRawData, HEX);
+        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
 #else
         PrintULL::print(&Serial, IrReceiver.decodedIRData.decodedRawData, HEX);
+        Serial.println("");
 #endif
-        Serial.print(", decoded address: ");
-        Serial.print(IrReceiver.decodedIRData.address, HEX);
-        Serial.print(", decoded command: ");
+        //Print address
+        Serial.print("Decoded address: ");
+        Serial.println(IrReceiver.decodedIRData.address, HEX);
+
+        //Print command
+        Serial.print("Decoded command: ");
         Serial.println(IrReceiver.decodedIRData.command, HEX);
+
+        //If present, print data in an Oled screen
+        #if defined(SDA_OLED) && defined(SCL_OLED)
+        u8g2.clearBuffer();
+        u8g2.setCursor(xOffset+1, yOffset+u8g2.getMaxCharHeight());
+        u8g2.print(String("Prot: ") + getProtocolString(IrReceiver.decodedIRData.protocol));
+        u8g2.setCursor(xOffset+1, yOffset+ 2*u8g2.getMaxCharHeight());
+        u8g2.printf("Addr: 0x%x", IrReceiver.decodedIRData.address);
+        u8g2.setCursor(xOffset+1, yOffset+ 3*u8g2.getMaxCharHeight());
+        u8g2.printf("Cmd: 0x%x", IrReceiver.decodedIRData.command);
+        u8g2.sendBuffer();
+        #endif
+
+        //Turn led if command matches the TRIGGER_CMD
         if(IrReceiver.decodedIRData.command == TRIGGER_CMD) turn_led();
         IrReceiver.resume();
     }
@@ -51,17 +89,17 @@ void receive_ir_data() {
 
 void turn_led() {
     if(!led_on) { //Turn on led
-        #ifdef LED_INVERTED
-        digitalWrite(LED, 0);
-        #else
+        #ifndef LED_INVERTED
         digitalWrite(LED, 1);
+        #else
+        digitalWrite(LED, 0);
         #endif
         led_on = true;
     } else { //Turn off led
-        #ifdef LED_INVERTED
-        digitalWrite(LED, 1);
-        #else
+        #ifndef LED_INVERTED
         digitalWrite(LED, 0);
+        #else
+        digitalWrite(LED, 1);
         #endif
         led_on = false;
     }
@@ -121,6 +159,15 @@ void setup() {
     pinMode(LED, OUTPUT);
     #ifdef LED_INVERTED
     digitalWrite(LED, 1);
+    #endif
+    
+    #if defined(SDA_OLED) && defined(SCL_OLED)
+    u8g2.begin();
+    u8g2.setContrast(255); // set contrast to maximum 
+    u8g2.setBusClock(400000); //400kHz I2C 
+    u8g2.enableUTF8Print();
+    u8g2.setFont(u8g2_font_6x12_tr);
+    Serial.println("OLed iniciada.");
     #endif
 }
 
