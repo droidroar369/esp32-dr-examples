@@ -34,6 +34,37 @@ p {
     border-radius: 25%;
     margin: -2px;
   }
+  cursor: pointer;
+}
+
+#white-btn {
+  width: 32px;
+  height:32px;
+  border: solid 2px black;
+  cursor: pointer;
+}
+
+#black-btn {
+  width: 32px;
+  height:32px;
+  background-color: black;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 36.3 12.4 A 40 40 0 1 0 63.7 12.4 M 50 50 L 50 5" stroke="white" stroke-width="3"/></svg>');
+  cursor: pointer;
+}
+
+.panel01 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: -10px;
+}
+
+.panel02 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
 }
 </style>
 </head>
@@ -41,13 +72,18 @@ p {
 <body>
 
 <p>Escoge un color</p>
-<input type="color" id="color01" onchange="send_color(this);">
+<div class="panel01">
+<input type="color" id="color01" onchange="send_color(this.value);">
+<div class="panel02">
+  <input type="button" id="white-btn" onclick="send_color('#ffffff');">
+  <input type="button" id="black-btn" onclick="send_color('#000000');">
+</div>
+</div>
 
 <script type="text/javascript">
 //Function that sends the color through AJAX
-function send_color(elem) {
+function send_color(color) {
   var xhr= new XMLHttpRequest();
-  var color= elem.value;
   color= color.substring(1); //Color without the initial "#"
   console.log(color);
   
@@ -125,7 +161,7 @@ void start_server() {
   //URI handlers
   httpd_uri_t root_uri = {
     .uri = "/",
-    .method = HTTP_GET, //Root's method always must be GET
+    .method = HTTP_GET,
     .handler = handle_root,
     .user_ctx = NULL
   };
